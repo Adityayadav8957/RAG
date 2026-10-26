@@ -2,6 +2,7 @@
 
 import { useMemo, type ComponentProps } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { Citation } from "@/lib/types";
 
 const CITE_PREFIX = "#cite-";
@@ -29,7 +30,7 @@ export function Markdown({
   streaming?: boolean;
 }) {
   const source = useMemo(
-    () => text.replace(/\[(\d{1,3})\](?!\()/g, (m, n: string) => (citations.some((c) => c.n === Number(n)) ? `[${n}](${CITE_PREFIX}${n})` : m)),
+    () => text.replace(/<br\s*\/?>/gi, "; ").replace(/\[(\d{1,3})\](?!\()/g, (m, n: string) => (citations.some((c) => c.n === Number(n)) ? `[${n}](${CITE_PREFIX}${n})` : m)),
     [text, citations],
   );
   const components = useMemo<Components>(
@@ -51,7 +52,7 @@ export function Markdown({
   );
   return (
     <div className={`prose-chat${streaming ? " streaming" : ""}`}>
-      <ReactMarkdown components={components}>{source}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{source}</ReactMarkdown>
     </div>
   );
 }
