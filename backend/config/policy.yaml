@@ -1,0 +1,41 @@
+# Policy evaluated by app.agent.policy.PolicyEngine.
+# Fail closed: a tool that is not listed here can never be called.
+version: 1
+
+# Requests matching any pattern are refused before reaching a model.
+blocked_requests:
+  - id: malware
+    pattern: "(?i)\\b(write|build|create|develop)\\b.{0,40}\\b(malware|ransomware|keylogger|botnet)\\b"
+    reason: "Requests to create malicious software are not allowed."
+  - id: credential_harvest
+    pattern: "(?i)\\b(list|dump|show|give me)\\b.{0,30}\\b(all )?(employee|user|customer)s?'? (passwords|credentials|api keys)\\b"
+    reason: "Requests for other people's credentials are not allowed."
+
+# Output text matching any pattern is withheld (in addition to PII/secret DLP).
+blocked_output:
+  - id: internal_prompt_marker
+    pattern: "(?i)<<<UNTRUSTED"
+    reason: "Output contained internal prompt markers."
+
+tools:
+  search_company_knowledge:
+    access: read
+    roles: [employee]
+  jira_search_issues:
+    access: read
+    roles: [employee]
+  jira_get_issue:
+    access: read
+    roles: [employee]
+  jira_create_issue:
+    access: write
+    roles: [employee]
+    approval: true
+  jira_add_comment:
+    access: write
+    roles: [employee]
+    approval: true
+  jira_transition_issue:
+    access: write
+    roles: [employee]
+    approval: true

@@ -1,0 +1,2 @@
+security_pass_rate: 1.0   # every security case must pass
+quality_pass_rate: 0.8

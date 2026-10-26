@@ -1,0 +1,67 @@
+# Render Blueprint: three web services. Secrets marked `sync: false` are entered in the
+# Render dashboard on first deploy. Postgres (with pgvector) is Neon.
+services:
+  - type: web
+    name: assistant-api
+    runtime: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    plan: free
+    region: singapore                              # same region as the Neon project: ~2 ms to the DB
+    healthCheckPath: /readyz
+    autoDeploy: true
+    buildFilter:
+      paths: [backend/**, render.yaml]
+    envVars:
+      - {key: SERVICE, value: api}
+      - {key: ENVIRONMENT, value: production}
+      - {key: RUN_MIGRATIONS, value: "true"}
+      - {key: PUBLIC_BASE_URL, sync: false}        # e.g. https://assistant-api.onrender.com
+      - {key: FRONTEND_ORIGIN, sync: false}        # e.g. https://assistant-web.onrender.com
+      - {key: DATABASE_URL, sync: false}           # Neon pooled URL
+      - {key: GOOGLE_CLIENT_ID, sync: false}
+      - {key: SIGNUP_MODE, value: open}              # open = self-serve workspaces; restricted = allowlist/invites only
+      - {key: ADMIN_EMAILS, sync: false}
+      - {key: GEMINI_API_KEY, sync: false}
+      - {key: FALLBACK_API_KEY, sync: false}       # Groq key (optional but recommended: faster, steadier)
+      - {key: FALLBACK_BASE_URL, value: "https://api.groq.com/openai/v1"}
+      - {key: FALLBACK_MODEL_SMALL, value: "openai/gpt-oss-20b"}
+      - {key: FALLBACK_MODEL_FRONTIER, value: "openai/gpt-oss-120b"}
+      - {key: LLM_PREFER_FALLBACK, value: "true"}
+      - {key: JIRA_OAUTH_CLIENT_ID, sync: false}
+      - {key: JIRA_OAUTH_CLIENT_SECRET, sync: false}
+      - {key: JIRA_MCP_URL, sync: false}           # https://assistant-jira-mcp.onrender.com/mcp
+      - {key: METRICS_TOKEN, sync: false}
+      - {key: MCP_SHARED_SECRET, sync: false}
+      - {key: SESSION_SECRET, generateValue: true}
+      - {key: TOKEN_ENCRYPTION_KEY, sync: false}   # Fernet key; changing it invalidates stored Jira tokens
+
+  - type: web
+    name: assistant-jira-mcp
+    runtime: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    plan: free
+    region: singapore                              # same region as the Neon project: ~2 ms to the DB
+    healthCheckPath: /healthz
+    autoDeploy: true
+    buildFilter:
+      paths: [backend/**, render.yaml]
+    envVars:
+      - {key: SERVICE, value: mcp}
+      - {key: MCP_SHARED_SECRET, sync: false}      # must equal the api service value
+
+  - type: web
+    name: assistant-web
+    runtime: docker
+    dockerContext: ./frontend
+    dockerfilePath: ./frontend/Dockerfile
+    plan: free
+    region: singapore                              # same region as the Neon project: ~2 ms to the DB
+    autoDeploy: true
+    buildFilter:
+      paths: [frontend/**, render.yaml]
+    envVars:
+      - {key: BACKEND_URL, sync: false}            # https://assistant-api.onrender.com
+      - {key: NEXT_PUBLIC_GOOGLE_CLIENT_ID, sync: false}   # build-time: set before first deploy
+      - {key: SESSION_COOKIE_SECURE, value: "true"}

@@ -1,0 +1,55 @@
+name: CI
+on:
+  push: {branches: [main]}
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: backend}}
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: postgres}
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -e ".[dev]"
+      - run: ruff format --check .
+      - run: ruff check .
+      - run: mypy app jira_mcp
+      - run: pytest -q
+      - name: Evaluation release gate (security cases must pass 100%)
+        env:
+          EVAL_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/assistant_eval
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/assistant_eval
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -c "CREATE DATABASE assistant_eval"
+          alembic upgrade head
+          python -m evals.run --mode fake
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: frontend}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: "22", cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env: {NEXT_PUBLIC_GOOGLE_CLIENT_ID: ci}
+
+  images:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build ./backend
+      - run: docker build ./frontend

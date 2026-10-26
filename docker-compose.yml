@@ -1,0 +1,46 @@
+# Local development stack. Production uses Neon (Postgres with the pgvector extension).
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: assistant
+    ports: ["5433:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d assistant"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/assistant
+      JIRA_MCP_URL: http://jira-mcp:8100/mcp
+    depends_on:
+      postgres: {condition: service_healthy}
+    ports: ["8000:8000"]
+
+  jira-mcp:
+    build: ./backend
+    command: ["uvicorn", "jira_mcp.server:app", "--host", "0.0.0.0", "--port", "8100"]
+    env_file:
+      - path: ./backend/.env
+        required: false
+    ports: ["8100:8100"]
+
+  frontend:
+    build: ./frontend
+    environment:
+      BACKEND_URL: http://backend:8000
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      SESSION_COOKIE_SECURE: "false"
+    depends_on: [backend]
+    ports: ["3000:3000"]
+
+volumes:
+  pgdata:
