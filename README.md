@@ -14,7 +14,7 @@ human approval for anything that changes data.
 ```
 Browser ─▶ Next.js (BFF, httpOnly cookie) ─▶ FastAPI ─▶ Gemini
                                               │  ├─▶ Postgres (Neon): users, ACLs, chunks, audit
-                                              │  ├─▶ Qdrant Cloud: vectors + semantic cache
+                                              │  ├─▶ (same Postgres) pgvector: chunk vectors + semantic cache
                                               │  └─▶ Jira MCP server ─▶ Jira (as the user)
 ```
 
@@ -26,7 +26,7 @@ The full request flow is in [docs/architecture.md](docs/architecture.md).
 2. [Keys and accounts you need](#keys-and-accounts-you-need)
 3. [Run it locally](#run-it-locally)
 4. [Configuration reference](#configuration-reference)
-5. [Deploy: Render + Neon + Qdrant Cloud](#deploy-render--neon--qdrant-cloud)
+5. [Deploy: Render + Neon](#deploy-render--neon)
 6. [Using the app](#using-the-app)
 7. [Security model](#security-model)
 8. [Testing and the release gate](#testing-and-the-release-gate)
@@ -43,7 +43,7 @@ backend/                 FastAPI service (Python 3.12)
     api/                 HTTP routes: auth, chat (SSE), documents, integrations, admin
     agent/               orchestrator, intent + model router, policy, guardrails,
                          tool gateway, MCP client, Jira OAuth
-    rag/                 parsing, chunking, ingestion, hybrid retrieval, Qdrant access
+    rag/                 parsing, chunking, ingestion, hybrid retrieval, pgvector access
     cache/               permission-aware semantic cache
     security/            Google token verification, sessions, RBAC, PII, injection, crypto
     observability/       audit log, Prometheus metrics, tracing spans
@@ -53,10 +53,10 @@ backend/                 FastAPI service (Python 3.12)
   alembic/               database migrations
   config/policy.yaml     tool permissions, blocked requests, blocked output
   evals/                 behavioural regression suite and release gate
-  tests/                 unit tests and integration tests (real Postgres + Qdrant)
+  tests/                 unit tests and integration tests (real Postgres with pgvector)
 frontend/                Next.js app (chat, documents, settings, admin)
 docs/                    architecture
-docker-compose.yml       local Postgres + Qdrant (and the full stack)
+docker-compose.yml       local Postgres with pgvector (and the full stack)
 render.yaml              Render Blueprint
 .github/workflows/       CI
 ```
@@ -73,9 +73,8 @@ Everything below has a free tier. **Local development needs only the first two r
 | 4 | Token encryption key | `python -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())"` | `TOKEN_ENCRYPTION_KEY` | Prod (encrypts Jira tokens at rest) |
 | 5 | MCP shared secret | `openssl rand -hex 32` | `MCP_SHARED_SECRET` (identical on the API and the MCP service) | Prod |
 | 6 | Neon Postgres URL | [neon.tech](https://neon.tech) → create project → **pooled** connection string | `DATABASE_URL` | Prod |
-| 7 | Qdrant Cloud URL + API key | [cloud.qdrant.io](https://cloud.qdrant.io) → free cluster → API key | `QDRANT_URL`, `QDRANT_API_KEY` | Prod |
 | 8 | Jira OAuth app | [developer.atlassian.com](https://developer.atlassian.com/console/myapps/) → create **OAuth 2.0 (3LO)** app → Permissions: Jira API with `read:jira-work` and `write:jira-work` → Authorization: callback URL `https://<your-api>/v1/integrations/jira/callback` | `JIRA_OAUTH_CLIENT_ID`, `JIRA_OAUTH_CLIENT_SECRET` | Only if you want Jira |
-| 9 | Allowed email domain(s) and admin emails | Your Workspace domain, and who should be admin | `ALLOWED_EMAIL_DOMAINS`, `ADMIN_EMAILS` | Prod |
+| 9 | Sign-up mode (optional admin emails) | `open` (self-serve, the default) or `restricted` | `SIGNUP_MODE`, `ADMIN_EMAILS`, `ALLOWED_EMAIL_DOMAINS` | Prod |
 | 10 | Render account | [render.com](https://render.com) | (deploy target) | Prod |
 | 11 | Metrics token (optional) | `openssl rand -hex 32` | `METRICS_TOKEN` | Optional |
 | 11b | Fallback model key (optional) | [console.groq.com](https://console.groq.com) (free), or another OpenAI-compatible provider | `FALLBACK_API_KEY` and the `FALLBACK_*` settings | Optional, recommended on free tiers |
@@ -92,8 +91,8 @@ provider by implementing `LLMClient` (`backend/app/llm/client.py`).
 Prerequisites: Docker, Python 3.11+ (3.12 recommended), Node 22.
 
 ```bash
-# 1. Postgres (port 5433) and Qdrant (port 6333)
-docker compose up -d postgres qdrant
+# 1. Postgres with pgvector (port 5433)
+docker compose up -d postgres
 
 # 2. Backend
 cd backend
@@ -138,19 +137,17 @@ required secrets are set.
 | `PUBLIC_BASE_URL` | `http://localhost:8000` | Public URL of the API (Jira OAuth callback) |
 | `FRONTEND_ORIGIN` | `http://localhost:3000` | Where users are redirected after Jira connect; CORS origin |
 | `DATABASE_URL` | local compose | Postgres. Neon `postgresql://…?sslmode=require` URLs work as given |
-| `QDRANT_URL`, `QDRANT_API_KEY` | local | Qdrant |
 | `GOOGLE_CLIENT_ID` | — | Audience for Google ID token verification |
-| `ALLOWED_EMAIL_DOMAINS` | — | Comma-separated; only these domains can sign in |
+| `SIGNUP_MODE` | `open` | `open`: anyone can sign up (see *Getting people in*). `restricted`: only `ALLOWED_EMAIL_DOMAINS`, `ADMIN_EMAILS` and invited emails |
+| `ALLOWED_EMAIL_DOMAINS` | — | Comma-separated; used by `restricted` mode |
 | `ADMIN_EMAILS` | — | Comma-separated; become admins on sign-in |
-| `BOOTSTRAP_FIRST_ADMIN` | `false` | While no admin exists, the first allowed person to sign in becomes admin |
 | `SESSION_SECRET`, `SESSION_TTL_MINUTES` | —, `480` | Signing key and lifetime of app sessions |
 | `TOKEN_ENCRYPTION_KEY` | — | Fernet key for tokens stored in the database |
 | `GEMINI_API_KEY` | — | Gemini |
 | `MODEL_SMALL`, `MODEL_FRONTIER` | `gemini-3.5-flash-lite`, `gemini-3.5-flash` | Router targets |
 | `FALLBACK_API_KEY`, `FALLBACK_BASE_URL`, `FALLBACK_MODEL_SMALL`, `FALLBACK_MODEL_FRONTIER` | unset, `https://api.x.ai/v1` | Optional second provider (any OpenAI-compatible API: Groq, xAI Grok, OpenRouter, Ollama). Used when Gemini fails (or first, with `LLM_PREFER_FALLBACK`). Example for Groq: base URL `https://api.groq.com/openai/v1`, models `openai/gpt-oss-20b` and `openai/gpt-oss-120b` |
 | `LLM_PREFER_FALLBACK` | `false` | Answer with the fallback provider first (lower latency); Gemini becomes the fallback. Embeddings always use Gemini. |
-| `SINGLE_TENANT` | empty | Put every allowed email domain in one tenant. Default: tenant = email domain, so a user at `a.com` cannot read `b.com` documents. |
-| `EMBEDDING_MODEL`, `EMBEDDING_DIM` | `gemini-embedding-001`, `768` | Changing the dimension needs new Qdrant collections |
+| `EMBEDDING_MODEL`, `EMBEDDING_DIM` | `gemini-embedding-001`, `768` | Changing the dimension needs a migration and a reindex |
 | `RETRIEVAL_TOP_K`, `RETRIEVAL_CANDIDATES` | `8`, `24` | Context size and candidate pool |
 | `LLM_RERANK` | `true` | LLM reranking of candidates (one extra small-model call) |
 | `CACHE_ENABLED`, `CACHE_SIMILARITY_THRESHOLD`, `CACHE_TTL_SECONDS` | `true`, `0.93`, `3600` | Semantic cache |
@@ -173,27 +170,26 @@ them and which need approval. A tool that is not listed cannot be called, even i
 server offers it. Any tool with `access: write` requires approval unless you explicitly set
 `approval: false`.
 
-## Deploy: Render + Neon + Qdrant Cloud
+## Deploy: Render + Neon
 
 Three Render web services (API, Jira MCP server, web app) described in `render.yaml`.
 
 1. **Neon**: create a project and copy the **pooled** connection string. The app handles
    `sslmode`, PgBouncer and idle suspend (connections are recycled) automatically.
-2. **Qdrant Cloud**: create a free cluster; copy the URL and an API key.
-3. **Google OAuth**: create the Web client (table above). Add your final web URL, for example
+2. **Google OAuth**: create the Web client (table above). Add your final web URL, for example
    `https://assistant-web.onrender.com`, to **Authorized JavaScript origins**.
-4. **Atlassian** (optional): create the 3LO app. Set the callback to
+3. **Atlassian** (optional): create the 3LO app. Set the callback to
    `https://<api-service>.onrender.com/v1/integrations/jira/callback`.
-5. **Render**: *New → Blueprint*, select this repository. Fill in the variables marked
+4. **Render**: *New → Blueprint*, select this repository. Fill in the variables marked
    `sync: false` (see the table of keys). Set the same `MCP_SHARED_SECRET` on the API and the
    MCP service. Set `JIRA_MCP_URL` to `https://<mcp-service>.onrender.com/mcp`, and
    `PUBLIC_BASE_URL` / `FRONTEND_ORIGIN` / `BACKEND_URL` to the services' public URLs.
    `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is read at **build time**; set it before the first deploy.
-6. **First start**: the API runs `alembic upgrade head` on boot (`RUN_MIGRATIONS=true`) and
-   creates the Qdrant collections. Check `https://<api>/readyz`.
-7. **Sign in** with an address listed in `ADMIN_EMAILS`, then invite colleagues in **Admin**
-   (see *Getting people in*). For an interview demo, invite the interviewer's Google address as
-   `admin` before the session, or enable `BOOTSTRAP_FIRST_ADMIN` on a fresh database.
+5. **First start**: the API runs `alembic upgrade head` on boot (`RUN_MIGRATIONS=true`) and
+   enables the `vector` extension. Check `https://<api>/readyz`.
+6. **Sign in** with an address listed in `ADMIN_EMAILS`, then invite colleagues in **Admin**
+   (see *Getting people in*). For an interview demo nothing needs preparing: the interviewer signs
+   in with any Google account, gets their own workspace as admin, uploads a document and chats.
 
 **Cloudflare (optional, recommended):** proxy your custom domain through Cloudflare and add
 a rate-limiting rule for `/v1/*` (this is the "Edge" box in the architecture) and the managed
@@ -260,16 +256,20 @@ past answers can be replayed. It never contains document text or secrets. Code:
 
 Everyone signs in with Google. There is no password and no separate signup form.
 
-1. **First admin.** Put your email in `ADMIN_EMAILS`. When that address first signs in, the account
-   is created with the `admin` role. For a throwaway demo you can instead set
-   `BOOTSTRAP_FIRST_ADMIN=true`: while no admin exists, the first allowed person to sign in becomes
-   admin. Turn it off afterwards.
-2. **Who may sign in.** An email is admitted if its domain is in `ALLOWED_EMAIL_DOMAINS`, it is in
-   `ADMIN_EMAILS`, or an admin invited it.
-3. **Invite a teammate** (Admin page, "Invite a teammate"): enter their email and roles. No email is
-   sent; share the app link. When they sign in with Google using that email they land with exactly
-   those roles. Re-inviting changes the roles, and revoking an invitation blocks sign-in.
-4. **Manage them later** in the same page: change roles, deactivate an account (effective on the very
+1. **Self-serve workspaces (default, `SIGNUP_MODE=open`).** Anyone can sign in with Google; nobody
+   has to create accounts. The first person in a workspace becomes its admin, with no setup by hand:
+   - A **company address** with a verified Google Workspace domain joins that company's workspace.
+     The first person from the domain is its admin; later colleagues join as employees.
+   - A **personal address** (Gmail, Outlook, ...) gets a private workspace and is its admin.
+   Workspaces are hard walls: users, documents, cache entries, invitations and the audit log never
+   cross them, and admins only see their own workspace.
+2. **Invite a teammate** (Admin page, "Invite a teammate"): enter their email and roles. No email is
+   sent; share the app link. When they sign in with Google using that email they join **your**
+   workspace with exactly those roles, whatever their email domain. Re-inviting changes the
+   roles, and revoking an invitation blocks sign-in.
+3. **Restricted mode (`SIGNUP_MODE=restricted`).** Only invited emails, `ADMIN_EMAILS` and
+   `ALLOWED_EMAIL_DOMAINS` can sign in. `ADMIN_EMAILS` are always admins of their workspace.
+4. **Manage people later** in the same page: change roles, deactivate an account (effective on the very
    next request), and read the audit log (`admin.user_invited`, `admin.roles_changed`, ...).
 
 API: `GET/POST /v1/admin/invitations`, `DELETE /v1/admin/invitations/{id}`.
@@ -283,7 +283,7 @@ restricted to listed roles and individual users. The uploader and admins can alw
 |---|---|
 | Unauthorized access | Google ID token verified server-side (audience, verified email, allowed domain, Workspace `hd`); roles re-read from the database on every request; deactivation takes effect immediately |
 | Session theft by script | Session token is in an httpOnly cookie set by the Next.js server; browser JavaScript never sees it |
-| Reading documents you shouldn't | ACL filter in Qdrant, SQL, and a final Python check; ACL changes sync to the vector payload and purge cached answers |
+| Reading documents you shouldn't | Tenant + ACL filter in the SQL query (vector and keyword branches) and a final Python check; ACL changes purge cached answers |
 | Cache leaking across users | Every cache hit re-validates access to all source documents; tool-using answers are never cached |
 | Prompt injection (user) | Heuristic score + optional LLM classifier on borderline input; fail closed |
 | Indirect injection (documents, tool output) | Scan, drop above threshold, fence as untrusted data |
@@ -301,16 +301,16 @@ What the model sees is limited by design: it never receives documents the user c
 
 ```bash
 cd backend
-docker compose -f ../docker-compose.yml up -d postgres qdrant   # integration tests need these
+docker compose -f ../docker-compose.yml up -d postgres   # integration tests need this
 pytest                       # 31 unit + 26 integration tests
 ruff check . && ruff format --check . && mypy app jira_mcp
 ```
 
-The integration tests run the real application against real Postgres and Qdrant with a
+The integration tests run the real application against real Postgres (pgvector) with a
 fake model, and assert security properties: ACL isolation, cache non-leakage, injection
 blocking in input, documents and tool output, approval single-use and expiry, role
 enforcement, audit immutability, and the real MCP server over HTTP. Tests are skipped
-automatically if Postgres or Qdrant is unreachable.
+automatically if Postgres is unreachable.
 
 **Evaluation suite** (`backend/evals/`): data-driven cases in `cases.yaml`, thresholds in
 `thresholds.yaml`.
@@ -333,7 +333,7 @@ Add a case to `cases.yaml` for every incident or bug you want to never see again
 - **Logs**: JSON lines with `request_id` and `user_id`. Every response carries `X-Request-ID`.
 - **Metrics**: Prometheus at `/metrics` (requests, latency, cache results, LLM calls,
   guardrail activations, tool outcomes, step latency). Protect with `METRICS_TOKEN`.
-- **Health**: `/healthz` (process), `/readyz` (Postgres and Qdrant).
+- **Health**: `/healthz` (process), `/readyz` (Postgres and pgvector).
 - **Audit**: query `GET /v1/admin/audit` or the `audit_log` table. Events include
   `auth.login`, `chat.input_blocked`, `chat.answered`, `chat.output_guardrail`,
   `document.*`, `tool.approval_requested`, `tool.approved`, `tool.rejected`,
@@ -341,10 +341,9 @@ Add a case to `cases.yaml` for every incident or bug you want to never see again
   `admin.*`. `retrieval.acl_mismatch` should never appear; investigate if it does.
 - **Rotating secrets**: changing `SESSION_SECRET` signs everyone out. Changing
   `TOKEN_ENCRYPTION_KEY` makes stored Jira tokens unreadable, so users reconnect Jira.
-- **Changing the embedding model or dimension**: create new Qdrant collections (new
-  `QDRANT_CHUNKS_COLLECTION`), then re-upload documents.
-- **Backups**: Neon provides point-in-time restore. Qdrant vectors can be rebuilt from
-  Postgres chunks by re-embedding.
+- **Changing the embedding model or dimension**: write a migration that changes the `vector(768)`
+  columns, then run `python -m app.rag.reindex` to re-embed every chunk.
+- **Backups**: Neon provides point-in-time restore. Vectors live in Postgres with everything else.
 
 ## API overview
 
@@ -391,5 +390,5 @@ Server-Sent Events: `status`, `token`, `approval_required`, `final`, `error`.
 | Documents stay "processing" | Check API logs for `ingest_failed`; usually the Gemini key or rate limit |
 | "The assistant is temporarily unavailable" | Gemini rate limit (free tier) or a bad key; the router already falls back to the small model |
 | Jira tools say to connect Jira | Connect from Settings; check the callback URL matches exactly |
-| `/readyz` returns 503 | `postgres` or `qdrant` shows `error`; check `DATABASE_URL` / `QDRANT_*` |
+| `/readyz` returns 503 | `postgres` or `pgvector` shows `error`; check `DATABASE_URL`, and that migrations ran |
 | Slow first request on Render | Free instance waking from sleep |

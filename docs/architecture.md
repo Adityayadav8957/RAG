@@ -119,9 +119,10 @@ document the cached answer was built from has been re-checked in Postgres. Role-
 keys are not enough because per-user grants differ between people with the same roles.
 Answers that used any tool (so could contain user-specific data) are never cached.
 
-**Access control is enforced three times.** In the Qdrant payload filter, in the SQL keyword
-query, and again in Python on each hydrated chunk. The Python check is authoritative, so a
-stale vector payload cannot leak a document.
+**Access control is enforced twice, and workspaces are hard walls.** The tenant and document ACL
+are part of the single hybrid SQL query (vector and keyword branches), then checked again in
+Python on every row. The Python rule is authoritative. Vectors live in Postgres next to the rows
+they describe, so an ACL change or a delete cannot leave a stale copy behind.
 
 **Untrusted content is data.** Retrieved excerpts and tool results are scanned for
 injection, dropped if they score above the threshold, and fenced with delimiters the system

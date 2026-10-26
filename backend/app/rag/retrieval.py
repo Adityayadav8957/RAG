@@ -1,26 +1,26 @@
 """Hybrid retrieval: ACL-filtered vector + keyword search, fused and reranked.
 
-Access control is enforced three times: in the pgvector SQL query, in the SQL keyword query, and
-again in Python on every hydrated chunk (authoritative; see ``rbac.can_read_document``).
+Access control is enforced twice: in the SQL (tenant + document ACL, for both the vector and the
+keyword branch) and again in Python on every row (authoritative; see ``rbac.can_read_document``).
 """
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 from dataclasses import dataclass
+from typing import Any
 
 from pydantic import BaseModel
-from sqlalchemy import func, or_, select
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
-from app.db.models import Chunk, Document
+from app.db.models import Document
 from app.llm.client import LLMClient, LLMError
 from app.logging import get_logger
 from app.observability.audit import audit
 from app.observability.metrics import RETRIEVALS
-from app.rag.vectorstore import ChunkIndex
+from app.rag.vectorstore import VEC, ChunkIndex, vec_literal
 from app.security.rbac import DocumentAcl, Principal, can_read_document
 
 log = get_logger("retrieval")
@@ -48,30 +48,49 @@ def doc_acl(doc: Document) -> DocumentAcl:
     )
 
 
-def _sql_acl(principal: Principal):  # type: ignore[no-untyped-def]
-    base = (Document.status == "ready") & (Document.tenant == principal.tenant)
-    if principal.is_admin:
-        return base
-    return base & or_(
-        Document.visibility == "all",
-        Document.owner_id == principal.user_id,
-        Document.allowed_user_ids.contains([principal.user_id]),
-        Document.allowed_roles.overlap(sorted(principal.roles)),
-    )
+_HYBRID_SQL = """
+WITH vec AS (
+    SELECT c.id, row_number() OVER (ORDER BY c.embedding <=> {q}) AS r
+    FROM chunks c JOIN documents d ON d.id = c.document_id
+    WHERE c.embedding IS NOT NULL AND d.status = 'ready' AND d.tenant = :tenant {acl}
+    ORDER BY c.embedding <=> {q}
+    LIMIT :n
+), kw AS (
+    SELECT c.id, row_number() OVER (ORDER BY ts_rank_cd(c.tsv, websearch_to_tsquery('english', :query)) DESC) AS r
+    FROM chunks c JOIN documents d ON d.id = c.document_id
+    WHERE c.tsv @@ websearch_to_tsquery('english', :query)
+      AND d.status = 'ready' AND d.tenant = :tenant {acl}
+    LIMIT :n
+)
+SELECT c.id, c.ordinal, c.text, d.id AS doc_id, d.title, d.owner_id, d.visibility, d.allowed_roles,
+       d.allowed_user_ids, d.tenant, d.status, vec.r AS vr, kw.r AS kr
+FROM chunks c
+JOIN documents d ON d.id = c.document_id
+LEFT JOIN vec ON vec.id = c.id
+LEFT JOIN kw ON kw.id = c.id
+WHERE vec.id IS NOT NULL OR kw.id IS NOT NULL
+"""
 
 
-async def keyword_search(
-    session: AsyncSession, principal: Principal, query: str, limit: int
-) -> list[uuid.UUID]:
-    tsq = func.websearch_to_tsquery("english", query)
-    stmt = (
-        select(Chunk.id)
-        .join(Document, Document.id == Chunk.document_id)
-        .where(Chunk.tsv.op("@@")(tsq), _sql_acl(principal))
-        .order_by(func.ts_rank_cd(Chunk.tsv, tsq).desc())
-        .limit(limit)
+async def _hybrid_rows(
+    session: AsyncSession, principal: Principal, query: str, qvec: list[float], n: int
+) -> list[Any]:
+    """Vector search, keyword search and the chunk/document rows in ONE round trip.
+
+    The ACL predicate here mirrors ``rbac.can_read_document``; the Python rule is applied again
+    to every row and is authoritative.
+    """
+    acl = (
+        ""
+        if principal.is_admin
+        else "AND (d.visibility = 'all' OR d.owner_id = :uid OR :uid = ANY(d.allowed_user_ids) "
+        "OR d.allowed_roles && CAST(:roles AS varchar[]))"
     )
-    return list((await session.execute(stmt)).scalars().all())
+    params: dict[str, Any] = {"q": vec_literal(qvec), "query": query, "tenant": principal.tenant, "n": n}
+    if not principal.is_admin:
+        params.update(uid=principal.user_id, roles=sorted(principal.roles))
+    sql = _HYBRID_SQL.format(q=VEC.format(name="q"), acl=acl)
+    return list((await session.execute(text(sql), params)).all())
 
 
 def reciprocal_rank_fusion(rankings: list[list[uuid.UUID]]) -> list[tuple[uuid.UUID, float]]:
@@ -124,41 +143,37 @@ async def retrieve(
 ) -> list[RetrievedChunk]:
     n = settings.retrieval_candidates
     qvec = query_vector or (await llm.embed([query], task="query"))[0]
-    # Vector and keyword search are independent queries: run them concurrently.
-    vector_hits, keyword_ids = await asyncio.gather(
-        index.search(qvec, principal, n), keyword_search(session, principal, query, n)
-    )
+    rows = await _hybrid_rows(session, principal, query, qvec, n)
 
-    fused = reciprocal_rank_fusion([[h.chunk_id for h in vector_hits], keyword_ids])[:n]
+    by_id = {r.id: r for r in rows}
+    vec_rank = [r.id for r in sorted((r for r in rows if r.vr is not None), key=lambda r: r.vr)]
+    kw_rank = [r.id for r in sorted((r for r in rows if r.kr is not None), key=lambda r: r.kr)]
+    fused = reciprocal_rank_fusion([vec_rank, kw_rank])[:n]
     if not fused:
         RETRIEVALS.labels(outcome="empty").inc()
         return []
 
-    ids = [cid for cid, _ in fused]
-    rows = (
-        await session.execute(
-            select(Chunk, Document).join(Document, Document.id == Chunk.document_id).where(Chunk.id.in_(ids))
-        )
-    ).all()
-    by_id = {chunk.id: (chunk, doc) for chunk, doc in rows}
-
     results: list[RetrievedChunk] = []
     for cid, score in fused:
-        pair = by_id.get(cid)
-        if pair is None:
-            continue  # chunk vanished between the search and the fetch
-        chunk, doc = pair
-        if doc.status != "ready" or not can_read_document(principal, doc_acl(doc)):
+        row = by_id[cid]
+        acl = DocumentAcl(
+            owner_id=row.owner_id,
+            visibility=row.visibility,
+            allowed_roles=frozenset(row.allowed_roles or []),
+            allowed_user_ids=frozenset(row.allowed_user_ids or []),
+            tenant=row.tenant,
+        )
+        if row.status != "ready" or not can_read_document(principal, acl):
             # Defence in depth: the SQL filter and the Python rule must agree; if not, never leak.
-            log.error("acl_mismatch", chunk_id=str(cid), document_id=str(doc.id))
+            log.error("acl_mismatch", chunk_id=str(cid), document_id=str(row.doc_id))
             await audit(
                 "retrieval.acl_mismatch",
                 actor_id=principal.user_id,
-                resource=f"document:{doc.id}",
+                resource=f"document:{row.doc_id}",
                 details={"chunk_id": str(cid)},
             )
             continue
-        results.append(RetrievedChunk(cid, doc.id, doc.title, chunk.ordinal, chunk.text, score))
+        results.append(RetrievedChunk(cid, row.doc_id, row.title, row.ordinal, row.text, score))
 
     # Reranking only changes the outcome when there are more candidates than we will keep.
     if settings.llm_rerank and len(results) > settings.retrieval_top_k:

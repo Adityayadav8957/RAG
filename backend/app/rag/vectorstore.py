@@ -21,9 +21,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
 from app.db.session import get_sessionmaker
-from app.security.rbac import Principal
 
-_VEC = "CAST(CAST(:{name} AS text) AS vector)"
+VEC = "CAST(CAST(:{name} AS text) AS vector)"
 
 
 def vec_literal(vector: list[float]) -> str:
@@ -55,34 +54,8 @@ class ChunkIndex:
         self, session: AsyncSession, pairs: list[tuple[uuid.UUID, list[float]]]
     ) -> None:
         """Write embeddings for chunk rows that already exist in this transaction."""
-        stmt = text(f"UPDATE chunks SET embedding = {_VEC.format(name='v')} WHERE id = :id")
+        stmt = text(f"UPDATE chunks SET embedding = {VEC.format(name='v')} WHERE id = :id")
         await session.execute(stmt, [{"id": cid, "v": vec_literal(vec)} for cid, vec in pairs])
-
-    async def search(self, vector: list[float], principal: Principal, limit: int) -> list[VectorHit]:
-        # Same predicate as rbac.can_read_document, expressed in SQL. The Python check still runs
-        # on every hydrated chunk and is authoritative.
-        acl = (
-            ""
-            if principal.is_admin
-            else (
-                " AND (d.visibility = 'all' OR d.owner_id = :uid"
-                " OR :uid = ANY(d.allowed_user_ids) OR d.allowed_roles && CAST(:roles AS varchar[]))"
-            )
-        )
-        stmt = text(
-            f"""SELECT c.id AS id, 1 - (c.embedding <=> {_VEC.format(name="q")}) AS score
-                FROM chunks c JOIN documents d ON d.id = c.document_id
-                WHERE c.embedding IS NOT NULL AND d.status = 'ready' AND d.tenant = :tenant{acl}
-                ORDER BY c.embedding <=> {_VEC.format(name="q")}
-                LIMIT :n"""
-        )
-        params: dict[str, Any] = {"q": vec_literal(vector), "tenant": principal.tenant, "n": limit}
-        if not principal.is_admin:
-            params["uid"] = principal.user_id
-            params["roles"] = sorted(principal.roles)
-        async with get_sessionmaker()() as session:
-            rows = (await session.execute(stmt, params)).all()
-        return [VectorHit(r.id, float(r.score)) for r in rows]
 
 
 class CacheIndex:
@@ -94,17 +67,18 @@ class CacheIndex:
     async def ensure(self) -> None:
         return None  # the table is created by migration 0003
 
-    async def lookup(self, vector: list[float], scope: str, threshold: float) -> dict[str, Any] | None:
+    async def lookup(
+        self, session: AsyncSession, vector: list[float], scope: str, threshold: float
+    ) -> dict[str, Any] | None:
         stmt = text(
             f"""SELECT answer, citations, source_doc_ids,
-                       1 - (embedding <=> {_VEC.format(name="q")}) AS sim
+                       1 - (embedding <=> {VEC.format(name="q")}) AS sim
                 FROM semantic_cache
                 WHERE scope = :scope AND expires_at > now()
-                ORDER BY embedding <=> {_VEC.format(name="q")}
+                ORDER BY embedding <=> {VEC.format(name="q")}
                 LIMIT 1"""
         )
-        async with get_sessionmaker()() as session:
-            row = (await session.execute(stmt, {"q": vec_literal(vector), "scope": scope})).first()
+        row = (await session.execute(stmt, {"q": vec_literal(vector), "scope": scope})).first()
         if row is None or float(row.sim) < threshold:
             return None
         return {
@@ -117,7 +91,7 @@ class CacheIndex:
         stmt = text(
             f"""INSERT INTO semantic_cache (scope, answer, citations, source_doc_ids, expires_at, embedding)
                 VALUES (:scope, :answer, CAST(:citations AS jsonb), CAST(:docs AS uuid[]),
-                        to_timestamp(:expires), {_VEC.format(name="v")})"""
+                        to_timestamp(:expires), {VEC.format(name="v")})"""
         )
         docs = [uuid.UUID(str(d)) for d in payload.get("source_doc_ids", [])]
         async with get_sessionmaker()() as session:

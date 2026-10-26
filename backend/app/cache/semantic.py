@@ -47,7 +47,7 @@ class SemanticCache:
         if not self._settings.cache_enabled:
             return None
         payload = await self._index.lookup(
-            vector, principal.tenant, self._settings.cache_similarity_threshold
+            session, vector, principal.tenant, self._settings.cache_similarity_threshold
         )
         if payload is None:
             CACHE_LOOKUPS.labels(result="miss").inc()

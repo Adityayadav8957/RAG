@@ -35,20 +35,20 @@ export function useNotice(): { open: () => void } {
 
 const POINTS: { title: string; body: string }[] = [
   {
-    title: "Backend wake-up",
-    body: "The API runs on Render's free web service, which sleeps after about 15 minutes idle. The first request after that can take 30 to 60 seconds.",
+    title: "First request can be slow",
+    body: "Everything here runs on free tiers, which go to sleep when idle. The first request after a quiet period can take up to 30 to 60 seconds to wake the services.",
   },
   {
     title: "Database latency",
-    body: "The database is Neon's free Postgres in Singapore. Each request makes about 10 round trips, roughly 100 to 150 ms each from far-away regions.",
+    body: "Each request makes several round trips to a free-tier managed database, which adds some latency to every answer.",
   },
   {
-    title: "Model rate limits",
-    body: "Models are on the Gemini and Groq free tiers, which have rate limits. If one is busy, the app automatically falls back to the other.",
+    title: "Model fallback",
+    body: "When a model hits its usage limit, the app automatically falls back to a different one. This keeps answers coming but can add a slight delay.",
   },
   {
-    title: "Answer speed",
-    body: "Repeated questions are answered from a permission-checked semantic cache in about 1 second. First-time questions take roughly 2 to 5 seconds.",
+    title: "Repeat questions are faster",
+    body: "Repeated questions are answered from a permission-checked semantic cache, so they come back much sooner than the first time.",
   },
   {
     title: "Where the time goes",
