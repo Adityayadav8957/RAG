@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import { useEffect } from "react";
-import { UsageUnavailable } from "@/components/admin/UsageUnavailable";
 import { ShieldCheck } from "@/components/icons";
 import { PageHeader } from "@/components/PageHeader";
 import { AdminSkeleton, SectionSkeleton } from "@/components/skeletons";
@@ -57,7 +56,6 @@ export default function AdminPage() {
       <InviteSection />
       <UsersTable />
       <AuditLog />
-      <UsageUnavailable />
     </div>
   );
 }
