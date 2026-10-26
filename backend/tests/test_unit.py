@@ -244,3 +244,23 @@ class TestFallbackLLM:
         await llm.generate(model=s.model_small, system="", messages=[])
         assert up.model == "grok-small"
         assert await llm.embed(["x"], task="query") == [[1.0]]  # embeddings never fall back
+
+
+class TestTokenCipher:
+    def test_accepts_fernet_keys_and_arbitrary_secrets(self) -> None:
+        from cryptography.fernet import Fernet
+
+        from app.security.crypto import TokenCipher
+
+        for key in (Fernet.generate_key().decode(), "a" * 64, "openssl-rand-hex-style-secret-value"):
+            cipher = TokenCipher(key)
+            assert cipher.decrypt(cipher.encrypt("jira-token")) == "jira-token"
+        assert TokenCipher("a" * 64).encrypt("x") != TokenCipher("b" * 64).encrypt("x")
+
+    def test_rejects_tiny_secrets(self) -> None:
+        import pytest
+
+        from app.security.crypto import TokenCipher
+
+        with pytest.raises(ValueError):
+            TokenCipher("short")
