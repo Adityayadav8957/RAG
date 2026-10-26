@@ -73,7 +73,7 @@ export function StageList({ nodes, events, live }: { nodes: NodeView[]; events: 
               {can && open && (
                 <ol className="m-0 flex list-none flex-col gap-2 border-t border-border bg-subtle p-2">
                   {r.events.map((e) => (
-                    <TraceCard key={e.seq} event={e} animate={live} />
+                    <TraceCard key={e.seq} event={e} animate={live} compact showTitle={r.events.length > 1} />
                   ))}
                 </ol>
               )}
@@ -81,7 +81,7 @@ export function StageList({ nodes, events, live }: { nodes: NodeView[]; events: 
           );
         })}
         {finalEvents.map((e) => (
-          <TraceCard key={e.seq} event={e} animate={live} />
+          <TraceCard key={e.seq} event={e} animate={live} compact />
         ))}
       </ol>
     </section>
