@@ -24,8 +24,8 @@ function StepIcon({ state }: { state: Step["state"] }) {
 }
 
 function Steps({ steps }: { steps: Step[] }) {
-  if (steps.length === 0) return null;
   const current = [...steps].reverse().find((s) => s.state === "run") ?? steps[steps.length - 1];
+  if (!current) return null;
   return (
     <div role="status" aria-live="polite" className="flex items-center gap-2 text-[13px] text-muted">
       <StepIcon state={current.state} />
