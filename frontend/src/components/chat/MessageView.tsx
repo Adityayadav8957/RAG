@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { memo, useState } from "react";
-import { Activity, BookOpen, Check, ChevronDown, ChevronUp, CircleCheck, CircleX, Copy, FileText, LoaderCircle } from "../icons";
+import { Activity, BookOpen, Check, ChevronDown, ChevronUp, Copy, FileText } from "../icons";
 import { DobbyBurst } from "../DobbyBurst";
 import { Skel } from "../skeletons";
 import type { Step, UiMessage } from "./types";
@@ -19,9 +19,8 @@ const Markdown = dynamic(() => import("../Markdown").then((m) => m.Markdown), {
 });
 
 function StepIcon({ state }: { state: Step["state"] }) {
-  if (state === "run") return <LoaderCircle size={16} className="spin text-accent-text" />;
-  if (state === "done") return <CircleCheck size={16} className="text-ok" />;
-  return <CircleX size={16} className="text-err" />;
+  const mood = state === "run" ? "thinking" : state === "done" ? "success" : "error";
+  return <DobbyBurst size={18} mood={mood} />;
 }
 
 function Steps({ steps }: { steps: Step[] }) {
@@ -127,13 +126,7 @@ export const MessageView = memo(function MessageView({
   const open = (n: number) => onOpenCitation(message.key, n);
   return (
     <article aria-label="Assistant response" className="flex flex-col gap-3">
-      {message.streaming && !message.text && (
-        <div className="-ml-1 flex items-center gap-2">
-          <DobbyBurst size={32} mood="thinking" />
-          <span className="text-[13px] font-medium text-muted">Dobby is on it…</span>
-        </div>
-      )}
-      <Steps steps={message.steps} />
+      {!message.text && <Steps steps={message.steps} />}
       {count > 0 && (
         <span className="inline-flex max-w-full items-center gap-1.5 self-start whitespace-nowrap rounded-md bg-accent-soft px-2 py-[3px] text-xs font-medium text-accent-text">
           <BookOpen size={14} />
