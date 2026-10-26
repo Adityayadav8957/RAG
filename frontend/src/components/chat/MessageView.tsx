@@ -25,15 +25,12 @@ function StepIcon({ state }: { state: Step["state"] }) {
 
 function Steps({ steps }: { steps: Step[] }) {
   if (steps.length === 0) return null;
+  const current = [...steps].reverse().find((s) => s.state === "run") ?? steps[steps.length - 1];
   return (
-    <ul role="status" aria-live="polite" className="m-0 flex list-none flex-col gap-1.5 p-0">
-      {steps.map((s, i) => (
-        <li key={`${i}-${s.label}`} className="flex items-center gap-2 text-[13px] text-muted">
-          <StepIcon state={s.state} />
-          <span>{s.label}</span>
-        </li>
-      ))}
-    </ul>
+    <div role="status" aria-live="polite" className="flex items-center gap-2 text-[13px] text-muted">
+      <StepIcon state={current.state} />
+      <span>{current.label}</span>
+    </div>
   );
 }
 
