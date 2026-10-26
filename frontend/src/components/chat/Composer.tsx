@@ -50,7 +50,7 @@ export function Composer({
                 if (!streaming && canSend) onSend();
               }
             }}
-            placeholder="Ask anything about your work…"
+            placeholder="Ask Dobby anything about your work…"
             aria-invalid={tooLong}
             className="max-h-[200px] min-w-0 flex-1 resize-none self-center border-none bg-transparent px-1 py-[7px] text-[15px] leading-normal outline-none focus-visible:outline-none"
           />

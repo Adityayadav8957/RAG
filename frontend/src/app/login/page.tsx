@@ -50,7 +50,7 @@ export default function LoginPage() {
             /* ignore */
           }
           if (res.status === 403) {
-            setError(detail || "This Google account is not allowed. Use your company email address.");
+            setError(detail || "This Google account is not allowed to use this application.");
             setRejected(true);
           } else if (res.status === 502) {
             setError("The service is temporarily unavailable. Please try again shortly.");
@@ -73,17 +73,18 @@ export default function LoginPage() {
     const id = window.google?.accounts.id;
     if (!id || !buttonRef.current || !CLIENT_ID) return;
     id.initialize({ client_id: CLIENT_ID, callback: (r) => void onCredential(r), ux_mode: "popup" });
-    id.renderButton(buttonRef.current, { theme: "outline", size: "large", text: "signin_with", shape: "rectangular", width: 280 });
+    id.renderButton(buttonRef.current, { theme: "outline", size: "large", text: "continue_with", shape: "rectangular", width: 280 });
   }, [onCredential]);
 
   return (
     <main className="grid min-h-dvh place-items-center bg-bg p-6 text-ink">
       {CLIENT_ID && <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" onReady={initGoogle} />}
       <div className="flex w-full max-w-[380px] flex-col items-center gap-3.5 text-center">
-        <BrandMark size={40} />
-        <h1 className="m-0 text-[22px] font-semibold tracking-[-0.01em]">Sign in to Enterprise AI</h1>
+        <BrandMark size={72} />
+        <h1 className="m-0 text-[22px] font-semibold tracking-[-0.01em]">Sign in or create your workspace with Google</h1>
         <p className="m-0 text-sm leading-[1.55] text-muted">
-          Use your company Google account to continue. Your conversations stay private to you.
+          Meet Dobby. Company accounts join their company workspace; personal accounts get a private one. If you were
+          invited, just sign in with the email you were invited at. Your conversations stay private to you.
         </p>
 
         <div className="mt-1.5 flex min-h-11 justify-center">
@@ -108,7 +109,7 @@ export default function LoginPage() {
               <p className="m-0 font-semibold [overflow-wrap:anywhere]">{error}</p>
               {rejected && (
                 <p className="m-0 text-xs font-normal text-muted">
-                  Access is by invitation. Ask an administrator to invite the email you signed in with, or choose a different Google account.
+                  Ask an administrator to invite the email you signed in with, or sign in with a different Google account.
                 </p>
               )}
             </div>

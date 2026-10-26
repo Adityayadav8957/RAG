@@ -1,4 +1,4 @@
-# Enterprise Assistant frontend
+# Dobby frontend
 
 Next.js 15 (App Router) + Tailwind 4. The browser only talks to this origin; route handlers
 proxy to the FastAPI backend and keep the access token in an httpOnly `session` cookie.
@@ -22,6 +22,9 @@ Scripts: `dev`, `build`, `start`, `lint`, `typecheck`, `test`.
 - `src/middleware.ts` redirects based on the `session` cookie
 
 ## UI
+- Product name is Dobby. The design is the Claude Design "Dobby" file: same warm-neutral/indigo tokens (plus `--accent-hi`), Geist fonts,
+  and the `DobbyMark` bloom mascot (`components/DobbyMark.tsx`, moods idle/thinking/error/waiting). Design-only elements with no backend
+  (demo-data chip, saved chats, feedback/regenerate, attachments, simulated usage table) are intentionally not built.
 - Design tokens (light/dark) live in `src/app/globals.css` as CSS variables mapped into Tailwind; Geist and Geist Mono
   are self-hosted via `next/font/google` at build time. Icons are inline SVGs in `src/components/icons.tsx`.
 - Theme (light/dark/system) is stored in `localStorage` (guarded with try/catch) and applied as `data-theme` on `<html>`

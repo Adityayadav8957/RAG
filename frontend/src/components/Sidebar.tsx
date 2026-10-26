@@ -63,7 +63,7 @@ export function Sidebar({
         {expanded && (
           <BrandLink onNavigate={onNavigate}>
             <BrandMark />
-            <span className="whitespace-nowrap text-sm font-semibold">Enterprise AI</span>
+            <span className="whitespace-nowrap text-sm font-semibold">Dobby</span>
           </BrandLink>
         )}
         <button

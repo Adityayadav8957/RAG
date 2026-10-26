@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { memo, useState } from "react";
 import { Activity, BookOpen, Check, ChevronDown, ChevronUp, CircleCheck, CircleX, Copy, FileText, LoaderCircle } from "../icons";
+import { DobbyMark } from "../DobbyMark";
 import { Skel } from "../skeletons";
 import type { Step, UiMessage } from "./types";
 
@@ -126,6 +127,12 @@ export const MessageView = memo(function MessageView({
   const open = (n: number) => onOpenCitation(message.key, n);
   return (
     <article aria-label="Assistant response" className="flex flex-col gap-3">
+      {message.streaming && !message.text && (
+        <div className="-ml-1 flex items-center gap-2">
+          <DobbyMark size={32} mood="thinking" />
+          <span className="text-[13px] font-medium text-muted">Dobby is on it…</span>
+        </div>
+      )}
       <Steps steps={message.steps} />
       {count > 0 && (
         <span className="inline-flex max-w-full items-center gap-1.5 self-start whitespace-nowrap rounded-md bg-accent-soft px-2 py-[3px] text-xs font-medium text-accent-text">

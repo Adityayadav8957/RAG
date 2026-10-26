@@ -44,7 +44,7 @@ export function NavLink({
 /** The brand mark + name, linking home. */
 export function BrandLink({ children, onNavigate }: { children: React.ReactNode; onNavigate?: () => void }) {
   return (
-    <Link href="/" prefetch onClick={onNavigate} aria-label="Enterprise AI home" className="flex min-w-0 items-center gap-[9px] rounded-md">
+    <Link href="/" prefetch onClick={onNavigate} aria-label="Dobby home" className="flex min-w-0 items-center gap-[9px] rounded-md">
       {children}
     </Link>
   );

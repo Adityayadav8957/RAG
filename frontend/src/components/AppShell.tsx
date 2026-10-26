@@ -76,7 +76,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             </button>
             <BrandLink>
               <BrandMark size={22} />
-              <span className="text-sm font-semibold">Enterprise AI</span>
+              <span className="text-sm font-semibold">Dobby</span>
             </BrandLink>
           </div>
         )}

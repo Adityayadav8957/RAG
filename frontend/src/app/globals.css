@@ -5,7 +5,7 @@
   --bg: #f8f7f4; --surface: #ffffff; --subtle: #f1efea; --hover: #eceae4;
   --border: #e6e3dc; --border-strong: #d4d0c7;
   --ink: #1d1c1a; --muted: #625f58; --faint: #8a867e;
-  --accent: #4b4fd8; --accent-ink: #ffffff; --accent-soft: #ededfb; --accent-text: #3b3eb5;
+  --accent: #4b4fd8; --accent-hi: #a9abff; --accent-ink: #ffffff; --accent-soft: #ededfb; --accent-text: #3b3eb5;
   --ok: #1e7247; --ok-soft: #e6f2ea; --warn: #835500; --warn-soft: #faf0da; --err: #b42318; --err-soft: #fcebea;
   --shadow: 0 1px 2px rgba(28, 25, 20, 0.05), 0 8px 28px rgba(28, 25, 20, 0.08);
   --scrim: rgba(20, 18, 15, 0.32);
@@ -16,7 +16,7 @@
     --bg: #121211; --surface: #1a1a18; --subtle: #22211f; --hover: #2a2927;
     --border: #2e2d2a; --border-strong: #3d3b37;
     --ink: #edebe6; --muted: #a6a39c; --faint: #827f78;
-    --accent: #8689f4; --accent-ink: #111111; --accent-soft: #25264a; --accent-text: #b0b2ff;
+    --accent: #8689f4; --accent-hi: #d0d1ff; --accent-ink: #111111; --accent-soft: #25264a; --accent-text: #b0b2ff;
     --ok: #62c793; --ok-soft: #16291f; --warn: #e5b65c; --warn-soft: #2e2414; --err: #f2806f; --err-soft: #341a16;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.4);
     --scrim: rgba(0, 0, 0, 0.55);
@@ -27,7 +27,7 @@
   --bg: #121211; --surface: #1a1a18; --subtle: #22211f; --hover: #2a2927;
   --border: #2e2d2a; --border-strong: #3d3b37;
   --ink: #edebe6; --muted: #a6a39c; --faint: #827f78;
-  --accent: #8689f4; --accent-ink: #111111; --accent-soft: #25264a; --accent-text: #b0b2ff;
+  --accent: #8689f4; --accent-hi: #d0d1ff; --accent-ink: #111111; --accent-soft: #25264a; --accent-text: #b0b2ff;
   --ok: #62c793; --ok-soft: #16291f; --warn: #e5b65c; --warn-soft: #2e2414; --err: #f2806f; --err-soft: #341a16;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.4);
   --scrim: rgba(0, 0, 0, 0.55);
@@ -45,6 +45,7 @@
   --color-muted: var(--muted);
   --color-faint: var(--faint);
   --color-accent: var(--accent);
+  --color-accent-hi: var(--accent-hi);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
   --color-accent-text: var(--accent-text);
@@ -161,3 +162,6 @@ dialog.modal::backdrop { background: var(--scrim); }
 /* Loading placeholders. Motion is disabled by the prefers-reduced-motion rule above. */
 @keyframes skeleton-pulse { 50% { opacity: 0.5; } }
 .skeleton { display: block; border-radius: 6px; background: var(--hover); animation: skeleton-pulse 1.4s ease-in-out infinite; }
+
+@keyframes dobby-think { to { transform: rotate(360deg); } }
+.dobby-think { animation: dobby-think 6s linear infinite; }
