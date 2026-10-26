@@ -5,8 +5,7 @@ import { latencySegments, pipelineNodes, summarize, visibleEvents } from "@/lib/
 import type { TraceEvent } from "@/lib/types";
 import { Activity } from "../icons";
 import { ActivitySummary } from "./ActivitySummary";
-import { PipelineStrip } from "./PipelineStrip";
-import { TraceCard } from "./TraceCard";
+import { StageList } from "./StageList";
 
 export function ActivityTab({ trace, live }: { trace: TraceEvent[]; live: boolean }) {
   const view = useMemo(() => {
@@ -27,12 +26,7 @@ export function ActivityTab({ trace, live }: { trace: TraceEvent[]; live: boolea
   }
   return (
     <div className="flex flex-col gap-4">
-      <PipelineStrip nodes={view.nodes} />
-      <ol aria-label="Agent timeline" className="m-0 flex list-none flex-col gap-2 p-0">
-        {view.events.map((e) => (
-          <TraceCard key={e.seq} event={e} animate={live} />
-        ))}
-      </ol>
+      <StageList nodes={view.nodes} events={view.events} live={live} />
       <ActivitySummary summary={view.summary} segments={view.segments} totalMs={view.totalMs} />
     </div>
   );
