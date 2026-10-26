@@ -81,7 +81,25 @@ export function InviteSection() {
 
   return (
     <section aria-labelledby="invite-h" className="flex flex-col gap-3">
-      <h2 id="invite-h" className="m-0 text-base font-semibold">Invite a teammate</h2>
+      <div>
+        <h2 id="invite-h" className="m-0 text-base font-semibold">Invite a teammate</h2>
+        <p className="m-0 mt-1 text-[13px] text-muted">Allow a person to join your workspace. They get the roles you pick the first time they sign in.</p>
+      </div>
+      <ol className="m-0 grid list-none grid-cols-3 gap-3 p-0 max-md:grid-cols-1" aria-label="How inviting works">
+        {[
+          ["Allow them", "Enter their email and choose their roles."],
+          ["Share the link", "No email is sent. Send them the app link below."],
+          ["They sign in", "They sign in with Google using that email and land in your workspace with those roles."],
+        ].map(([title, body], i) => (
+          <li key={title} className="flex gap-3 rounded-xl border border-border bg-surface p-3.5">
+            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent-soft text-xs font-semibold text-accent-text">{i + 1}</span>
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-[13px] font-semibold">{title}</span>
+              <span className="text-xs leading-normal text-muted">{body}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
       <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start gap-4 max-lg:grid-cols-1">
         <form onSubmit={(e) => void submit(e)} noValidate className="flex flex-col gap-3.5 rounded-xl border border-border bg-surface p-[18px]">
           <div>
@@ -126,11 +144,11 @@ export function InviteSection() {
           <div className="flex items-center gap-3">
             <button type="submit" className="btn btn-primary" disabled={submitting}>
               {submitting && <LoaderCircle size={14} className="spin" />}
-              {submitting ? "Inviting…" : "Invite"}
+              {submitting ? "Allowing…" : "Allow & invite"}
             </button>
           </div>
           <p id="invite-hint" className="m-0 text-xs leading-normal text-muted">
-            They sign in with Google using this email; no email is sent — share the app link with them.
+            Only this email address can use the invitation. Roles can be changed later in Users.
           </p>
           <div className="flex items-center gap-2">
             <label htmlFor="app-link" className="sr-only">App link</label>
@@ -143,7 +161,7 @@ export function InviteSection() {
         </form>
 
         <div className="flex flex-col gap-2">
-          <h3 className="m-0 text-[13px] font-semibold">Pending invitations</h3>
+          <h3 className="m-0 text-[13px] font-semibold">Invitations</h3>
           {error && (
             <ErrorNote>
               <span className="flex flex-wrap items-center justify-between gap-3">
