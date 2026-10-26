@@ -1,6 +1,6 @@
 "use client";
 
-import { DobbyMark } from "../DobbyMark";
+import { DobbyBurst } from "../DobbyBurst";
 import { useUser } from "../UserProvider";
 import { BookOpen, KeyRound, ListChecks, Newspaper, type IconProps } from "../icons";
 
@@ -17,7 +17,7 @@ export function Welcome({ onPick, disabled }: { onPick: (text: string) => void; 
   return (
     <div className="flex flex-col gap-3 pt-[8vh]">
       <div className="mb-1.5 flex items-center gap-3">
-        <DobbyMark size={64} />
+        <DobbyBurst size={64} />
         <span className="text-[15px] font-medium text-muted">{first ? `Hi ${first}, I'm Dobby.` : "Hi, I'm Dobby."}</span>
       </div>
       <h2 className="m-0 text-[32px] font-semibold leading-[1.15] tracking-[-0.025em]">Your work, connected.</h2>

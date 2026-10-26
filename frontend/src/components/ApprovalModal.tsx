@@ -2,7 +2,7 @@
 
 import type { PendingAction } from "@/lib/types";
 import { formatRemaining, useRemaining } from "@/lib/useRemaining";
-import { DobbyMark } from "./DobbyMark";
+import { DobbyBurst } from "./DobbyBurst";
 import { Modal } from "./Modal";
 import { LoaderCircle, ShieldCheck } from "./icons";
 
@@ -27,7 +27,7 @@ export function ApprovalModal({
   return (
     <Modal titleId="appr-title" onClose={onClose} maxWidth="32.5rem" dismissible={!busy}>
       <div className="flex flex-col gap-1.5 px-[22px] pb-3.5 pt-5">
-        <DobbyMark size={52} mood="waiting" />
+        <DobbyBurst size={52} mood="waiting" />
         <span className="flex items-center gap-1.5 text-xs font-semibold text-warn">
           <ShieldCheck size={14} />
           Confirmation required · write action

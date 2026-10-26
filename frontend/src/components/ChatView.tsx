@@ -15,7 +15,7 @@ import type { UiMessage } from "./chat/types";
 import { Welcome } from "./chat/Welcome";
 import { useConversations } from "./ConversationsProvider";
 import { PanelRight, TriangleAlert } from "./icons";
-import { DobbyMark } from "./DobbyMark";
+import { DobbyBurst } from "./DobbyBurst";
 import { Skel } from "./skeletons";
 
 // Rarely-needed pieces load on demand; they are also warmed up after first paint (see the idle effect below).
@@ -333,7 +333,7 @@ export function ChatView() {
             {error && (
               <div role="alert" className="flex items-start gap-3 rounded-[10px] border border-border bg-err-soft px-3.5 py-3">
                 <TriangleAlert size={16} className="mt-px flex-none text-err" />
-                <DobbyMark size={36} mood="error" />
+                <DobbyBurst size={36} mood="error" />
                 <div className="flex flex-col gap-[3px] text-sm leading-normal">
                   <strong className="font-semibold">Something went wrong</strong>
                   <span className="text-muted">{error}</span>

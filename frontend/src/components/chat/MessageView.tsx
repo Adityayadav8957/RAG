@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { memo, useState } from "react";
 import { Activity, BookOpen, Check, ChevronDown, ChevronUp, CircleCheck, CircleX, Copy, FileText, LoaderCircle } from "../icons";
-import { DobbyMark } from "../DobbyMark";
+import { DobbyBurst } from "../DobbyBurst";
 import { Skel } from "../skeletons";
 import type { Step, UiMessage } from "./types";
 
@@ -129,7 +129,7 @@ export const MessageView = memo(function MessageView({
     <article aria-label="Assistant response" className="flex flex-col gap-3">
       {message.streaming && !message.text && (
         <div className="-ml-1 flex items-center gap-2">
-          <DobbyMark size={32} mood="thinking" />
+          <DobbyBurst size={32} mood="thinking" />
           <span className="text-[13px] font-medium text-muted">Dobby is on it…</span>
         </div>
       )}

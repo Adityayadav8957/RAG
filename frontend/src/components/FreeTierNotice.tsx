@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { hasSeenNotice, markNoticeSeen } from "@/lib/notice";
-import { DobbyMark } from "./DobbyMark";
+import { DobbyBurst } from "./DobbyBurst";
 import { Modal } from "./Modal";
 
 const NoticeContext = createContext<{ open: () => void }>({ open: () => undefined });
@@ -63,7 +63,7 @@ function FreeTierNotice({ onClose }: { onClose: () => void }) {
       <div className="flex flex-col gap-4 px-[22px] py-5">
         <div className="flex flex-col gap-1.5">
           <h2 id="notice-title" className="m-0 flex items-center gap-2.5 text-lg font-semibold tracking-[-0.01em]">
-            <DobbyMark size={32} mood="waiting" />
+            <DobbyBurst size={32} mood="waiting" />
             Running on free tiers
           </h2>
           <p className="m-0 text-[13px] leading-normal text-muted">

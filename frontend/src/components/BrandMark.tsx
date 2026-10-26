@@ -1,5 +1,5 @@
-import { DobbyMark, type DobbyMood } from "./DobbyMark";
+import { DobbyBurst, type DobbyMood } from "./DobbyBurst";
 
 export function BrandMark({ size = 26, mood = "idle" }: { size?: number; mood?: DobbyMood }) {
-  return <DobbyMark size={size} mood={mood} />;
+  return <DobbyBurst size={size} mood={mood} />;
 }
