@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BrandMark } from "@/components/BrandMark";
 import { LoaderCircle, ShieldCheck } from "@/components/icons";
@@ -27,6 +27,10 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [rejected, setRejected] = useState(false);
+
+  useEffect(() => {
+    void fetch("/api/warm").catch(() => {});
+  }, []);
 
   const onCredential = useCallback(
     async (r: CredentialResponse) => {
