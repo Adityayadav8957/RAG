@@ -58,6 +58,11 @@ async def _jira(ctx: Context[Any, Any, Any], method: str, path: str, **kwargs: A
             method, url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"}, **kwargs
         )
     if resp.status_code == 401:
+        if "scope" in resp.text.lower():
+            raise JiraApiError(
+                "The Jira connection lacks a permission this action needs. "
+                "Disconnect and reconnect Jira (and make sure the Atlassian app has the scope)."
+            )
         raise JiraApiError("Jira rejected the credentials (expired or revoked)")
     if resp.status_code == 403:
         raise JiraApiError("You do not have permission to do that in Jira")

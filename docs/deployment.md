@@ -15,7 +15,7 @@ Everything below has a free tier. **Local development needs only the first two r
 | 4 | Token encryption key | `python -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())"` (any random string of 16+ characters also works) | `TOKEN_ENCRYPTION_KEY` | Prod (encrypts Jira tokens at rest) |
 | 5 | MCP shared secret | `openssl rand -hex 32` | `MCP_SHARED_SECRET` (identical on the API and the MCP service) | Prod |
 | 6 | Neon Postgres URL | [neon.tech](https://neon.tech) → create project → **pooled** connection string | `DATABASE_URL` | Prod |
-| 8 | Jira OAuth app | [developer.atlassian.com](https://developer.atlassian.com/console/myapps/) → create **OAuth 2.0 (3LO)** app → Permissions: Jira API with `read:jira-work`, `write:jira-work` and `manage:jira-project` (needed to create projects) → Authorization: callback URL `https://<your-api>/v1/integrations/jira/callback` | `JIRA_OAUTH_CLIENT_ID`, `JIRA_OAUTH_CLIENT_SECRET` | Only if you want Jira |
+| 8 | Jira OAuth app | [developer.atlassian.com](https://developer.atlassian.com/console/myapps/) → create **OAuth 2.0 (3LO)** app → Permissions: Jira API with `read:jira-work`, `write:jira-work`, `read:jira-user` and `manage:jira-project` (the last two are needed to create projects) → Authorization: callback URL `https://<your-api>/v1/integrations/jira/callback` | `JIRA_OAUTH_CLIENT_ID`, `JIRA_OAUTH_CLIENT_SECRET` | Only if you want Jira |
 | 9 | Sign-up mode (optional admin emails) | `open` (self-serve, the default) or `restricted` | `SIGNUP_MODE`, `ADMIN_EMAILS`, `ALLOWED_EMAIL_DOMAINS` | Prod |
 | 10 | Render account | [render.com](https://render.com) | (deploy target) | Prod |
 | 11 | Metrics token (optional) | `openssl rand -hex 32` | `METRICS_TOKEN` | Optional |
