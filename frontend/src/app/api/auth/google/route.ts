@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { backendUrl, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 interface SessionResponse {
   access_token: string;
@@ -24,10 +25,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ detail: "Missing credential" }, { status: 400 });
   }
 
-  // Render's free tier sleeps; the proxy answers 502/503/504 (HTML) while the API wakes (~30-60s).
+  // Retry briefly on 502/503/504 (function cold start or a transient upstream blip).
   const WAKING = new Set([502, 503, 504]);
   let upstream: Response | undefined;
-  for (let attempt = 0; attempt < 14; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
     try {
       upstream = await fetch(`${backendUrl()}/v1/auth/google`, {
         method: "POST",
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
       console.error(`[auth/google] attempt ${attempt + 1}: fetch to ${backendUrl()} failed`, e);
       upstream = undefined;
     }
-    await new Promise((r) => setTimeout(r, 5000));
+    await new Promise((r) => setTimeout(r, 2000));
   }
   if (!upstream || WAKING.has(upstream.status)) {
     console.error(`[auth/google] backend still unavailable (status ${upstream?.status ?? "none"})`);

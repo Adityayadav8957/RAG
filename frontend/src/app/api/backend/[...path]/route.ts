@@ -4,6 +4,7 @@ import { backendUrl, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session"
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 60; // Vercel: chat streams (SSE) are cut at this limit
 
 type Ctx = { params: Promise<{ path: string[] }> };
 

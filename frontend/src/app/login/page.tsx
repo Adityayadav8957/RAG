@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BrandMark } from "@/components/BrandMark";
 import { LoaderCircle, ShieldCheck } from "@/components/icons";
@@ -28,12 +28,6 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [rejected, setRejected] = useState(false);
 
-  const [warming, setWarming] = useState(true);
-  useEffect(() => {
-    fetch("/api/warm")
-      .catch(() => {})
-      .finally(() => setWarming(false));
-  }, []);
 
   const onCredential = useCallback(
     async (r: CredentialResponse) => {
@@ -105,12 +99,6 @@ export default function LoginPage() {
         </div>
 
         <div aria-live="polite" className="min-h-5 w-full text-[13px]">
-          {warming && !busy && (
-            <p className="m-0 flex items-center justify-center gap-2 text-muted">
-              <LoaderCircle size={14} className="spin" />
-              Starting the server, this can take up to a minute…
-            </p>
-          )}
           {busy && (
             <p className="m-0 flex items-center justify-center gap-2 text-muted">
               <LoaderCircle size={14} className="spin" />
