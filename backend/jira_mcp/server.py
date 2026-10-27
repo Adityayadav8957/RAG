@@ -16,6 +16,7 @@ from typing import Any
 
 import httpx
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.applications import Starlette
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -25,7 +26,14 @@ GATEWAY_SECRET = os.environ.get("MCP_SHARED_SECRET", "dev-only-mcp-secret")
 API_ROOT = "https://api.atlassian.com/ex/jira"
 TIMEOUT = httpx.Timeout(20.0)
 
-mcp = FastMCP("jira", stateless_http=True, json_response=True)
+# Public hostname behind a proxy: the default localhost-only Host check would answer 421. Access is
+# gated by the gateway secret below, and DNS rebinding only matters for servers bound to localhost.
+mcp = FastMCP(
+    "jira",
+    stateless_http=True,
+    json_response=True,
+    transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
+)
 
 
 class JiraApiError(Exception):
