@@ -24,16 +24,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ detail: "Missing credential" }, { status: 400 });
   }
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(`${backendUrl()}/v1/auth/google`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ credential }),
-      cache: "no-store",
-    });
-  } catch {
-    return NextResponse.json({ detail: "Backend unavailable" }, { status: 502 });
+  // Render's free tier sleeps; the proxy answers 502/503/504 (HTML) while the API wakes (~30-60s).
+  const WAKING = new Set([502, 503, 504]);
+  let upstream: Response | undefined;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    try {
+      upstream = await fetch(`${backendUrl()}/v1/auth/google`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ credential }),
+        cache: "no-store",
+      });
+      if (!WAKING.has(upstream.status)) break;
+    } catch {
+      upstream = undefined;
+    }
+    await new Promise((r) => setTimeout(r, 5000));
+  }
+  if (!upstream || WAKING.has(upstream.status)) {
+    return NextResponse.json(
+      { detail: "Backend is waking up, please try again in a moment" },
+      { status: 503 },
+    );
   }
 
   if (!upstream.ok) {
