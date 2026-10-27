@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   // Render's free tier sleeps; the proxy answers 502/503/504 (HTML) while the API wakes (~30-60s).
   const WAKING = new Set([502, 503, 504]);
   let upstream: Response | undefined;
-  for (let attempt = 0; attempt < 6; attempt++) {
+  for (let attempt = 0; attempt < 14; attempt++) {
     try {
       upstream = await fetch(`${backendUrl()}/v1/auth/google`, {
         method: "POST",
