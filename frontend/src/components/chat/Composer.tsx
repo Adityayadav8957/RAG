@@ -26,7 +26,7 @@ export function Composer({
   const tooLong = value.length > MAX_LEN;
   const canSend = value.trim().length > 0 && !tooLong;
   return (
-    <div className="flex-none px-5 pb-4 max-sm:px-3">
+    <div className="flex-none px-5 pb-[max(1rem,env(safe-area-inset-bottom))] max-sm:px-3">
       <form
         className="mx-auto flex max-w-[740px] flex-col gap-2"
         onSubmit={(e) => {
@@ -60,7 +60,7 @@ export function Composer({
               onClick={onStop}
               aria-label="Stop generating"
               title="Stop generating"
-              className="grid h-9 w-9 flex-none place-items-center rounded-lg border-none bg-ink text-bg"
+              className="grid h-9 w-9 flex-none place-items-center max-sm:h-11 max-sm:w-11 rounded-lg border-none bg-ink text-bg"
             >
               <Square size={13} fill="currentColor" />
             </button>
@@ -70,7 +70,7 @@ export function Composer({
               disabled={!canSend}
               aria-label="Send message"
               title="Send (Enter)"
-              className="grid h-9 w-9 flex-none place-items-center rounded-lg border-none bg-accent text-accent-ink transition-opacity disabled:opacity-40"
+              className="grid h-9 w-9 flex-none place-items-center max-sm:h-11 max-sm:w-11 rounded-lg border-none bg-accent text-accent-ink transition-opacity disabled:opacity-40"
             >
               <ArrowUp size={16} />
             </button>

@@ -54,7 +54,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       {showDrawer && (
         <div aria-hidden="true" className="fixed inset-0 z-30 bg-[var(--scrim)]" onClick={() => setDrawerOpen(false)} />
       )}
-      <div className={desktop ? "flex-none" : showDrawer ? "fixed inset-y-0 left-0 z-40 shadow-pop" : "hidden"}>
+      <div className={desktop ? "flex-none" : showDrawer ? "fixed inset-y-0 left-0 z-40 max-w-[88vw] shadow-pop" : "hidden"}>
         <Suspense fallback={<div className="h-full w-[264px] border-r border-border bg-subtle" />}>
           <Sidebar
             expanded={desktop ? !collapsed : true}
@@ -70,7 +70,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
         {!desktop && (
-          <div className="flex h-12 flex-none items-center gap-2 border-b border-border px-3">
+          <div className="flex min-h-12 flex-none items-center gap-2 border-b border-border px-3 pt-[env(safe-area-inset-top)]">
             <button type="button" className="icon-btn" aria-label="Open menu" aria-expanded={drawerOpen} onClick={() => setDrawerOpen(true)}>
               <Menu size={18} />
             </button>

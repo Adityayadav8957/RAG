@@ -69,7 +69,10 @@
     color: var(--ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
+  button, a, summary, [role="button"] { touch-action: manipulation; }
   button, input, textarea, select { font: inherit; color: inherit; }
   button { cursor: pointer; }
   button:disabled { cursor: not-allowed; }
@@ -165,3 +168,14 @@ dialog.modal::backdrop { background: var(--scrim); }
 
 @keyframes dobby-think { to { transform: rotate(360deg); } }
 .dobby-think { animation: dobby-think 6s linear infinite; }
+
+/* Touch devices: comfortable tap targets, and 16px form text so iOS Safari does not zoom the page on focus.
+   Unlayered on purpose: it must beat the Tailwind utilities (e.g. text-[15px]) on individual fields. */
+@media (pointer: coarse) {
+  .btn { height: 2.75rem; }
+  .btn-sm { height: 2.5rem; }
+  .icon-btn { width: 2.75rem; height: 2.75rem; }
+  input:not([type="checkbox"]):not([type="radio"]), textarea, select { font-size: 16px !important; }
+  .field { height: 2.75rem; }
+}
+main { overscroll-behavior: contain; }
