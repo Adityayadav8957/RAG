@@ -162,6 +162,35 @@ async def jira_create_issue(
 
 
 @mcp.tool()
+async def jira_create_project(
+    key: str, name: str, ctx: Context[Any, Any, Any], description: str = "", template: str = "kanban"
+) -> dict[str, Any]:
+    """Create a Jira software project; the caller becomes its lead. Template is 'kanban' or 'scrum'.
+    Needs Jira admin rights. Requires user approval."""
+    templates = {
+        "kanban": "com.pyxis.greenhopper.jira:gh-simplified-kanban-classic",
+        "scrum": "com.pyxis.greenhopper.jira:gh-simplified-scrum-classic",
+    }
+    if template.lower() not in templates:
+        raise JiraApiError("Template must be 'kanban' or 'scrum'")
+    key = key.strip().upper()
+    if not (2 <= len(key) <= 10 and key.isalpha()):
+        raise JiraApiError("Project key must be 2-10 letters")
+    me = await _jira(ctx, "GET", "/myself")
+    body: dict[str, Any] = {
+        "key": key,
+        "name": name,
+        "projectTypeKey": "software",
+        "projectTemplateKey": templates[template.lower()],
+        "leadAccountId": me["accountId"],
+    }
+    if description:
+        body["description"] = description
+    data = await _jira(ctx, "POST", "/project", json=body)
+    return {"key": data.get("key"), "id": data.get("id")}
+
+
+@mcp.tool()
 async def jira_add_comment(issue_key: str, comment: str, ctx: Context[Any, Any, Any]) -> dict[str, Any]:
     """Add a comment to an issue. Requires user approval."""
     data = await _jira(ctx, "POST", f"/issue/{issue_key}/comment", json={"body": _adf(comment)})

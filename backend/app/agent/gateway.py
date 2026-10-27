@@ -104,6 +104,8 @@ def describe_action(name: str, args: dict[str, Any]) -> str:
 
     if name == "jira_create_issue":
         return f"Create a Jira {args.get('issue_type', 'Task')} in project {args.get('project_key')}: {short(args.get('summary'))}"
+    if name == "jira_create_project":
+        return f"Create a Jira project {args.get('key')} ({short(args.get('name'))})"
     if name == "jira_add_comment":
         return f"Add a comment to {args.get('issue_key')}: {short(args.get('comment'))}"
     if name == "jira_transition_issue":

@@ -31,6 +31,10 @@ tools:
     access: write
     roles: [employee]
     approval: true
+  jira_create_project:
+    access: write
+    roles: [employee]
+    approval: true
   jira_add_comment:
     access: write
     roles: [employee]

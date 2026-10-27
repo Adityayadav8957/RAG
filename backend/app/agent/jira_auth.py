@@ -24,7 +24,7 @@ from app.security.crypto import TokenCipher
 AUTHORIZE_URL = "https://auth.atlassian.com/authorize"
 TOKEN_URL = "https://auth.atlassian.com/oauth/token"  # noqa: S105 - public endpoint URL
 RESOURCES_URL = "https://api.atlassian.com/oauth/token/accessible-resources"
-SCOPES = "read:jira-work write:jira-work offline_access"
+SCOPES = "read:jira-work write:jira-work manage:jira-project offline_access"
 PROVIDER = "jira"
 _STATE_ALG = "HS256"
 
