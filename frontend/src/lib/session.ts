@@ -1,6 +1,7 @@
 export const SESSION_COOKIE = "session";
 
 export function backendUrl(): string {
+  if (process.env.NODE_ENV === "production") return "https://assistant-api-2oo2.onrender.com";
   return process.env.BACKEND_URL || "http://localhost:8000";
 }
 
