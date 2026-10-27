@@ -35,13 +35,16 @@ export async function POST(req: Request) {
         body: JSON.stringify({ credential }),
         cache: "no-store",
       });
+      console.log(`[auth/google] attempt ${attempt + 1}: upstream ${upstream.status}`);
       if (!WAKING.has(upstream.status)) break;
-    } catch {
+    } catch (e) {
+      console.error(`[auth/google] attempt ${attempt + 1}: fetch to ${backendUrl()} failed`, e);
       upstream = undefined;
     }
     await new Promise((r) => setTimeout(r, 5000));
   }
   if (!upstream || WAKING.has(upstream.status)) {
+    console.error(`[auth/google] backend still unavailable (status ${upstream?.status ?? "none"})`);
     return NextResponse.json(
       { detail: "Backend is waking up, please try again in a moment" },
       { status: 503 },
@@ -50,8 +53,10 @@ export async function POST(req: Request) {
 
   if (!upstream.ok) {
     let detail: unknown = "Sign-in failed";
+    const raw = await upstream.text();
+    console.error(`[auth/google] upstream ${upstream.status}: ${raw.slice(0, 300)}`);
     try {
-      const j: unknown = await upstream.json();
+      const j: unknown = JSON.parse(raw);
       if (typeof j === "object" && j !== null && "detail" in j) detail = (j as { detail: unknown }).detail;
     } catch {
       /* keep default */
