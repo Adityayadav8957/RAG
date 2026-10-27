@@ -290,12 +290,12 @@ export function ChatView() {
   const title = conversations.find((c) => c.id === convParam)?.title || (convParam ? "Conversation" : "New chat");
   const assistants = messages.filter((m) => m.role === "assistant");
   const panelMessage = messages.find((m) => m.key === panelMsg) ?? assistants[assistants.length - 1] ?? null;
-  const mode: PanelMode = phone ? "sheet" : wide ? "column" : "overlay";
+  const mode: PanelMode = phone ? "dock" : wide ? "column" : "overlay";
   const isEmpty = messages.length === 0 && approvals.length === 0 && !streaming;
 
   return (
-    <div className="relative flex h-full">
-      <section aria-label="Chat" className="flex min-w-0 flex-1 flex-col bg-bg">
+    <div className={`relative flex h-full ${phone ? "flex-col" : ""}`}>
+      <section aria-label="Chat" className="flex min-h-0 min-w-0 flex-1 flex-col bg-bg">
         <header className="flex h-14 flex-none items-center justify-between gap-3 border-b border-border px-5 max-sm:px-3">
           <h1 className="m-0 min-w-0 truncate text-sm font-semibold">{title}</h1>
           <button

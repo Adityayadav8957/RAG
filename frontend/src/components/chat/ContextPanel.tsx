@@ -1,9 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PendingAction, TraceEvent } from "@/lib/types";
-import { Activity, BookOpen, X } from "../icons";
+import { Activity, BookOpen, ChevronDown, ChevronUp, X } from "../icons";
 import { Skel } from "../skeletons";
 import type { UiMessage } from "./types";
 
@@ -25,7 +25,8 @@ const TABS: { id: PanelTab; label: string }[] = [
   { id: "activity", label: "Activity" },
 ];
 
-export type PanelMode = "column" | "overlay" | "sheet";
+/** column: beside the chat; overlay: over its right edge; dock: under the chat on phones (chat stays visible). */
+export type PanelMode = "column" | "overlay" | "dock";
 
 function SourcesTab({
   message, focusN, messageCount, approvals,
@@ -73,7 +74,7 @@ function SourcesTab({
 }
 
 export function ContextPanel({
-  message, focusN, messageCount, approvals, mode, tab, onTab, trace, live, onClose,
+  message, focusN, messageCount, approvals, mode: baseMode, tab, onTab, trace, live, onClose,
 }: {
   message: UiMessage | null;
   focusN: number | null;
@@ -87,12 +88,17 @@ export function ContextPanel({
   onClose: () => void;
 }) {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  // On phones the dock can grow into a full-height sheet; the chat is covered only while it is expanded.
+  const [expanded, setExpanded] = useState(false);
+  const docked = baseMode === "dock";
+  const sheet = docked && expanded;
+  const mode = baseMode;
   useEffect(() => {
-    if (mode === "column") return;
+    if (mode === "column" || (docked && !expanded)) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mode, onClose]);
+  }, [mode, docked, expanded, onClose]);
 
   function onTabKey(e: React.KeyboardEvent, i: number) {
     const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
@@ -104,20 +110,21 @@ export function ContextPanel({
     tabRefs.current[next]?.focus();
   }
 
-  const frame =
-    mode === "sheet"
-      ? "fixed inset-x-0 bottom-0 z-[41] max-h-[82dvh] rounded-t-2xl border-t shadow-pop"
+  const frame = sheet
+    ? "fixed inset-x-0 bottom-0 z-[41] h-[85dvh] rounded-t-2xl border-t shadow-pop"
+    : docked
+      ? "relative h-[42dvh] flex-none rounded-t-2xl border-t shadow-pop"
       : mode === "overlay"
         ? "absolute inset-y-0 right-0 z-[21] w-[min(420px,92vw)] border-l shadow-pop"
         : "relative inset-y-0 w-[400px] flex-none border-l";
 
   return (
     <>
-      {mode !== "column" && (
-        <div aria-hidden="true" onClick={onClose} className={`${mode === "sheet" ? "fixed z-40" : "absolute z-20"} inset-0 bg-[var(--scrim)]`} />
+      {(mode === "overlay" || sheet) && (
+        <div aria-hidden="true" onClick={sheet ? () => setExpanded(false) : onClose} className={`${sheet ? "fixed z-40" : "absolute z-20"} inset-0 bg-[var(--scrim)]`} />
       )}
       <aside aria-label="Agent activity and sources" className={`${frame} flex flex-col overflow-hidden border-border bg-surface`}>
-        <div className="flex h-14 flex-none items-center justify-between gap-2 border-b border-border pl-3 pr-3">
+        <div className={`flex flex-none items-center justify-between gap-2 border-b border-border pl-3 pr-3 ${docked ? "h-12" : "h-14"}`}>
           <div role="tablist" aria-label="Panel view" className="flex gap-1 rounded-lg bg-subtle p-[3px]">
             {TABS.map((t, i) => {
               const active = tab === t.id;
@@ -145,11 +152,24 @@ export function ContextPanel({
               );
             })}
           </div>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close panel">
-            <X size={16} />
-          </button>
+          <div className="flex items-center">
+            {docked && (
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => setExpanded((e) => !e)}
+                aria-expanded={expanded}
+                aria-label={expanded ? "Shrink panel" : "Expand panel"}
+              >
+                {expanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+              </button>
+            )}
+            <button type="button" className="icon-btn" onClick={onClose} aria-label="Close panel">
+              <X size={16} />
+            </button>
+          </div>
         </div>
-        <div id="panel-body" role="tabpanel" aria-labelledby={`panel-tab-${tab}`} className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-4">
+        <div id="panel-body" role="tabpanel" aria-labelledby={`panel-tab-${tab}`} className="min-h-0 flex-1 overflow-y-auto px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4">
           {tab === "activity" ? <ActivityTab trace={trace} live={live} /> : <SourcesTab message={message} focusN={focusN} messageCount={messageCount} approvals={approvals} />}
         </div>
       </aside>
