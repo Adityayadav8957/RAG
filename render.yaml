@@ -15,7 +15,7 @@ services:
     envVars:
       - {key: SERVICE, value: api}
       - {key: ENVIRONMENT, value: production}
-      - {key: RUN_MIGRATIONS, value: "true"}
+      - {key: RUN_MIGRATIONS, value: "false"}       # faster cold start; run `alembic upgrade head` by hand on schema changes
       - {key: PUBLIC_BASE_URL, sync: false}        # e.g. https://assistant-api.onrender.com
       - {key: FRONTEND_ORIGIN, sync: false}        # e.g. https://assistant-web.onrender.com
       - {key: DATABASE_URL, sync: false}           # Neon pooled URL

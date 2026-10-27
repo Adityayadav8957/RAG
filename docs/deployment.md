@@ -127,8 +127,9 @@ Three Render web services (API, Jira MCP server, web app) described in `render.y
    MCP service. Set `JIRA_MCP_URL` to `https://<mcp-service>.onrender.com/mcp`, and
    `PUBLIC_BASE_URL` / `FRONTEND_ORIGIN` / `BACKEND_URL` to the services' public URLs.
    `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is read at **build time**; set it before the first deploy.
-5. **First start**: the API runs `alembic upgrade head` on boot (`RUN_MIGRATIONS=true`) and
-   enables the `vector` extension. Check `https://<api>/readyz`.
+5. **First start**: the Blueprint sets `RUN_MIGRATIONS=false` to keep cold starts fast, so run
+   `alembic upgrade head` once against Neon yourself (or temporarily set `RUN_MIGRATIONS=true`), and again
+   after any schema change. Migrations also enable the `vector` extension. Check `https://<api>/readyz`.
 6. **Sign in** with an address listed in `ADMIN_EMAILS`, then invite colleagues in **Admin**
    (see *Getting people in*). For an interview demo nothing needs preparing: the interviewer signs
    in with any Google account, gets their own workspace as admin, uploads a document and chats.
