@@ -26,6 +26,8 @@ const ACTIVE = new Set(["running", "waiting", "blocked", "error"]);
 export function StageList({ nodes, events, live }: { nodes: NodeView[]; events: TraceEvent[]; live: boolean }) {
   const [override, setOverride] = useState<Record<string, boolean>>({});
   const finalEvents = events.filter((e) => stageNode(e.stage) === null);
+  // The cache's query embedding is started alongside intent classification (see orchestrator.chat).
+  const overlapped = events.some((e) => e.stage === "cache");
   const rows = nodes.map((n) => ({ ...n, events: events.filter((e) => stageNode(e.stage) === n.key) }));
   const isOpen = (key: string, state: string) => override[key] ?? ACTIVE.has(state);
   const expandable = rows.filter((r) => r.events.length > 0);
@@ -51,6 +53,11 @@ export function StageList({ nodes, events, live }: { nodes: NodeView[]; events: 
             <>
               <StatusIcon state={r.state} />
               <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{r.label}</span>
+              {overlapped && (r.key === "intent" || r.key === "cache") && (
+                <span className="badge flex-none" title="The query embedding for the cache runs at the same time as intent classification, so its time is split between these two stages.">
+                  ∥ parallel
+                </span>
+              )}
               <span className="text-xs text-muted">{STATUS[r.state].label}</span>
               <span className="w-14 text-right font-mono text-[11px] tabular-nums text-faint">{r.ms === null ? "" : formatMs(r.ms)}</span>
               {can ? open ? <ChevronUp size={15} className="text-faint" /> : <ChevronDown size={15} className="text-faint" /> : <span className="w-[15px]" />}
